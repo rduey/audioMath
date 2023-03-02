@@ -37,6 +37,7 @@ AudioMathAudioProcessor::AudioMathAudioProcessor()
                        "Triplication",
                        "SinTan",
                        "Current Test")      , 0),
+    std::make_unique<juce::AudioParameterFloat> ("mix", "Dry / Wet", 0.0f, 1.0f, 0.5f)
 
 })
 {
@@ -138,85 +139,128 @@ bool AudioMathAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 
 void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    
+    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear (i, 0, buffer.getNumSamples());
+    
     auto mainInputOutput = getBusBuffer (buffer, true, 0);                                  // [5]
     auto sideChainInput  = getBusBuffer (buffer, true, 1);
     
     //juce::AudioProcessorParameter* choiceParameter = getParameters()[0];
     
+    
     //auto choiceValue = choiceParameter->getValue();
     auto choiceValue = state.getParameter("choice")->getValue();
-    
     int choice = choiceValue / choiceInc;
+    
+    float mix = state.getParameter ("mix")->getValue();
     
     for (auto j = 0; j < buffer.getNumSamples(); ++j)                                       // [7]
     {
         
         auto leastChannels = std::min(sideChainInput.getNumChannels(), mainInputOutput.getNumChannels());
+        float drySample;
+        float wetSample;
         
         
         switch(choice) {
             case 0:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    *mainInputOutput.getWritePointer (i, j) =
+                    //*mainInputOutput.getWritePointer (i, j) =
+                    wetSample =
                     sin(mainIn * abs(sideIn) * pi / 2);
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             case 1:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    *mainInputOutput.getWritePointer (i, j) =
+                    //*mainInputOutput.getWritePointer (i, j) =
+                    wetSample =
                     sin(mainIn * pi) * sin(sideIn * pi);
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             case 2:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
                     if (abs(sideIn) < abs(mainIn)) {
-                        *mainInputOutput.getWritePointer (i, j) = sideIn;
+                        wetSample = sideIn;
                     }
                     else {
-                        *mainInputOutput.getWritePointer (i, j) = mainIn;
+                        wetSample = mainIn;
                     }
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             case 3:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
                     if (abs(sideIn) > abs(mainIn)) {
-                        *mainInputOutput.getWritePointer (i, j) = sideIn;
+                        wetSample = sideIn;
                     }
                     else {
-                        *mainInputOutput.getWritePointer (i, j) = mainIn;
+                        wetSample = mainIn;
                     }
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             case 4:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    *mainInputOutput.getWritePointer (i, j) =
+                    //*mainInputOutput.getWritePointer (i, j) =
+                    wetSample =
                     (mainIn + sideIn) * (mainIn - sideIn);
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             case 5:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    *mainInputOutput.getWritePointer (i, j) =
+                    //*mainInputOutput.getWritePointer (i, j) =
+                    wetSample =
                     (mainIn + sideIn) * (mainIn - sideIn) * (sideIn - mainIn);
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             case 6:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    *mainInputOutput.getWritePointer (i, j) =
+                    //*mainInputOutput.getWritePointer (i, j) =
+                    wetSample =
                     -sin(tan(mainIn + sideIn)) * sin(tan(mainIn - sideIn)) * sin(tan(sideIn - mainIn));
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
                 /*
@@ -234,13 +278,17 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
             case 7:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
+                    drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
                     if (abs(sideIn) < mainIn) {
-                        *mainInputOutput.getWritePointer (i, j) = sideIn;
+                        wetSample = sideIn;
                     }
                     else {
-                        *mainInputOutput.getWritePointer (i, j) = mainIn;
+                        wetSample = mainIn;
                     }
+                    
+                    *mainInputOutput.getWritePointer (i, j) =
+                    (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
             default:
