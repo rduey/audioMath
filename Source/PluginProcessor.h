@@ -58,7 +58,7 @@ public:
 
 private:
     //==============================================================================
-    int numChoices = 8;
+    int numChoices = 7;
     float choiceInc = 0.0f;
     
     juce::AudioProcessorValueTreeState state;

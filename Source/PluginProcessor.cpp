@@ -35,8 +35,7 @@ AudioMathAudioProcessor::AudioMathAudioProcessor()
                        "Maximum",
                        "Plus*Minus",
                        "Triplication",
-                       "SinTan",
-                       "Current Test")      , 0),
+                       "SinTan")      , 0),
     std::make_unique<juce::AudioParameterFloat> ("mix", "Dry / Wet", 0.0f, 1.0f, 0.5f)
 
 })
@@ -148,10 +147,6 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     auto mainInputOutput = getBusBuffer (buffer, true, 0);                                  // [5]
     auto sideChainInput  = getBusBuffer (buffer, true, 1);
     
-    //juce::AudioProcessorParameter* choiceParameter = getParameters()[0];
-    
-    
-    //auto choiceValue = choiceParameter->getValue();
     auto choiceValue = state.getParameter("choice")->getValue();
     int choice = choiceValue / choiceInc;
     
@@ -166,32 +161,31 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         
         
         switch(choice) {
+            // Multiply
             case 0:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
                     drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    //*mainInputOutput.getWritePointer (i, j) =
                     wetSample =
                     sin(mainIn * abs(sideIn) * pi / 2);
-                    
                     *mainInputOutput.getWritePointer (i, j) =
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
+            // Sin Multiply
             case 1:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
                     drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    //*mainInputOutput.getWritePointer (i, j) =
                     wetSample =
                     sin(mainIn * pi) * sin(sideIn * pi);
-                    
                     *mainInputOutput.getWritePointer (i, j) =
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
+            // Minimum
             case 2:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
@@ -203,11 +197,11 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
                     else {
                         wetSample = mainIn;
                     }
-                    
                     *mainInputOutput.getWritePointer (i, j) =
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
+            // Maximum
             case 3:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
@@ -219,30 +213,28 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
                     else {
                         wetSample = mainIn;
                     }
-                    
                     *mainInputOutput.getWritePointer (i, j) =
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
+            // Plus * Minus
             case 4:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
                     drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    //*mainInputOutput.getWritePointer (i, j) =
                     wetSample =
                     (mainIn + sideIn) * (mainIn - sideIn);
-                    
                     *mainInputOutput.getWritePointer (i, j) =
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
+            // Triplication
             case 5:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
                     drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    //*mainInputOutput.getWritePointer (i, j) =
                     wetSample =
                     (mainIn + sideIn) * (mainIn - sideIn) * (sideIn - mainIn);
                     
@@ -250,43 +242,14 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
                 break;
+            // SinTan
             case 6:
                 for (auto i = 0; i < leastChannels; ++i) {
                     auto mainIn = *mainInputOutput.getReadPointer (i, j);
                     drySample = *mainInputOutput.getReadPointer (i, j);
                     auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    //*mainInputOutput.getWritePointer (i, j) =
                     wetSample =
                     -sin(tan(mainIn + sideIn)) * sin(tan(mainIn - sideIn)) * sin(tan(sideIn - mainIn));
-                    
-                    *mainInputOutput.getWritePointer (i, j) =
-                    (drySample * (1.0f - mix)) + (wetSample * mix);
-                }
-                break;
-                /*
-            case 5:
-                for (auto i = 0; i < leastChannels; ++i) {
-                    auto mainIn = *mainInputOutput.getReadPointer (i, j);
-                    auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    auto x = std::min(mainIn, sideIn);
-                    auto inside = 1.15f * x + float(1/sqrt(50));
-                    *mainInputOutput.getWritePointer (i, j) =
-                    std::max(0.9f * x,-(inside * inside) + 0.02f);
-                }
-                break;
-                 */
-            case 7:
-                for (auto i = 0; i < leastChannels; ++i) {
-                    auto mainIn = *mainInputOutput.getReadPointer (i, j);
-                    drySample = *mainInputOutput.getReadPointer (i, j);
-                    auto sideIn = sideChainInput.getReadPointer (i) [j];
-                    if (abs(sideIn) < mainIn) {
-                        wetSample = sideIn;
-                    }
-                    else {
-                        wetSample = mainIn;
-                    }
-                    
                     *mainInputOutput.getWritePointer (i, j) =
                     (drySample * (1.0f - mix)) + (wetSample * mix);
                 }
@@ -297,13 +260,6 @@ void AudioMathAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
                     *mainInputOutput.getReadPointer (i, j);
                 }
         }
-        
-        /*
-        for (auto i = 0; i < leastChannels; ++i) {
-            *mainInputOutput.getWritePointer (i, j) =
-            *mainInputOutput.getReadPointer (i, j) * sideChainInput.getReadPointer (i) [j] * choice;
-        }
-        */
     }
 }
 
